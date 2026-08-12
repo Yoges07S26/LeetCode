@@ -1,0 +1,81 @@
+#include <stdbool.h>
+#include <stdlib.h>
+
+#define MAX_SIZE 1000
+
+// A basic FIFO Queue structure
+typedef struct {
+    int data[MAX_SIZE];
+    int front;
+    int rear;
+    int size;
+} Queue;
+
+// Internal helper functions to enforce strict FIFO behavior
+Queue* createQueue() {
+    Queue* q = (Queue*)malloc(sizeof(Queue));
+    q->front = 0;
+    q->rear = -1;
+    q->size = 0;
+    return q;
+}
+
+void pushQueue(Queue* q, int x) {
+    q->rear = (q->rear + 1) % MAX_SIZE;
+    q->data[q->rear] = x;
+    q->size++;
+}
+
+int popQueue(Queue* q) {
+    int val = q->data[q->front];
+    q->front = (q->front + 1) % MAX_SIZE;
+    q->size--;
+    return val;
+}
+
+int peekQueue(Queue* q) {
+    return q->data[q->front];
+}
+
+bool emptyQueue(Queue* q) {
+    return q->size == 0;
+}
+
+typedef struct {
+    Queue* q; // The stack internally holds a FIFO queue
+} MyStack;
+
+MyStack* myStackCreate() {
+    MyStack* obj = (MyStack*)malloc(sizeof(MyStack));
+    obj->q = createQueue();
+    return obj;
+}
+
+// To maintain LIFO order, we push new elements to the back of the queue, 
+// then rotate all previous elements behind it.
+void myStackPush(MyStack* obj, int x) {
+    pushQueue(obj->q, x);
+    
+    // Rotate the queue elements: pull from front, push to back
+    for (int i = 0; i < obj->q->size - 1; i++) {
+        pushQueue(obj->q, popQueue(obj->q));
+    }
+}
+
+// Since elements were rotated during push, the top element is always at the front of our FIFO queue.
+int myStackPop(MyStack* obj) {
+    return popQueue(obj->q);
+}
+
+int myStackTop(MyStack* obj) {
+    return peekQueue(obj->q);
+}
+
+bool myStackEmpty(MyStack* obj) {
+    return emptyQueue(obj->q);
+}
+
+void myStackFree(MyStack* obj) {
+    free(obj->q);
+    free(obj);
+}
