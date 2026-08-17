@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <stdlib.h>
+typedef struct {
+    int enqueueTime;
+    int processingTime;
+    int index;
+} Task;
+typedef struct {
+    int processingTime;
+    int index;
+} HeapNode;
+int compareTasks(const void* a, const void* b) {
+    Task* t1 = (Task*)a;
+    Task* t2 = (Task*)b;
+    if (t1->enqueueTime != t2->enqueueTime) {
+        return (t1->enqueueTime < t2->enqueueTime) ? -1 : 1;
+    }
+    if (t1->processingTime != t2->processingTime) {
+        return (t1->processingTime < t2->processingTime) ? -1 : 1;
+    }
+    return (t1->index < t2->index) ? -1 : 1;
+}
+void heapPush(HeapNode* heap, int* heapSize, int procTime, int idx) {
+    int i = (*heapSize)++;
+    while (i > 0) {
+        int parent = (i - 1) / 2;
+        if (heap[parent].processingTime < procTime || 
+           (heap[parent].processingTime == procTime && heap[parent].index < idx)) {
+            break;
+        }
+        heap[i] = heap[parent];
+        i = parent;
+    }
+    heap[i].processingTime = procTime;
+    heap[i].index = idx;
+}
+HeapNode heapPop(HeapNode* heap, int* heapSize) {
+    HeapNode top = heap[0];
+    (*heapSize)--;
+    if (*heapSize == 0) return top;
+    HeapNode last = heap[*heapSize];
+    int i = 0;
+    while (i * 2 + 1 < *heapSize) {
+        int left = i * 2 + 1;
+        int right = i * 2 + 2;
+        int smallest = left;
+        if (right < *heapSize && 
+           (heap[right].processingTime < heap[left].processingTime || 
+           (heap[right].processingTime == heap[left].processingTime && heap[right].index < heap[left].index))) {
+            smallest = right;
+        }
+        if (last.processingTime < heap[smallest].processingTime || 
+           (last.processingTime == heap[smallest].processingTime && last.index < heap[smallest].index)) {
+            break;
+        }
+        heap[i] = heap[smallest];
+        i = smallest;
+    }
+    heap[i] = last;
+    return top;
+}
+int* getOrder(int** tasks, int tasksSize, int* tasksColSize, int* returnSize) {
+    *returnSize = tasksSize;
+    int* result = (int*)malloc(tasksSize * sizeof(int));
+    Task* extendedTasks = (Task*)malloc(tasksSize * sizeof(Task));
+    for (int i = 0; i < tasksSize; i++) {
+        extendedTasks[i].enqueueTime = tasks[i][0];
+        extendedTasks[i].processingTime = tasks[i][1];
+        extendedTasks[i].index = i;
+    }
+    qsort(extendedTasks, tasksSize, sizeof(Task), compareTasks);
+    HeapNode* minHeap = (HeapNode*)malloc(tasksSize * sizeof(HeapNode));
+    int heapSize = 0;
+    long long currentTime = 0;
+    int taskIdx = 0;
+    int resultIdx = 0;
+    while (taskIdx < tasksSize || heapSize > 0) {
+        if (heapSize == 0 && currentTime < extendedTasks[taskIdx].enqueueTime) {
+            currentTime = extendedTasks[taskIdx].enqueueTime;
+        }
+        while (taskIdx < tasksSize && extendedTasks[taskIdx].enqueueTime <= currentTime) {
+            heapPush(minHeap, &heapSize, extendedTasks[taskIdx].processingTime, extendedTasks[taskIdx].index);
+            taskIdx++;
+        }
+        HeapNode currentTask = heapPop(minHeap, &heapSize);
+        result[resultIdx++] = currentTask.index;
+        currentTime += currentTask.processingTime;
+    }
+    free(extendedTasks);
+    free(minHeap);
+    return result;
+}
